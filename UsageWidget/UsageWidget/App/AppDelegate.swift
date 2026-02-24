@@ -90,11 +90,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "Refresh", action: #selector(refreshData), keyEquivalent: "r"))
         menu.addItem(.separator())
+
+        // 5h window limit submenu
+        let limitMenu = NSMenu()
+        for limit in [450, 900, 2250, 4500, 9000] {
+            let item = NSMenuItem(title: "\(limit) / 5h", action: #selector(setRollingLimit(_:)), keyEquivalent: "")
+            item.tag = limit
+            item.target = self
+            let current = UserDefaults.standard.integer(forKey: "rollingLimit")
+            if current == limit {
+                item.state = .on
+            }
+            limitMenu.addItem(item)
+        }
+        let limitItem = NSMenuItem(title: "5h Window Limit", action: nil, keyEquivalent: "")
+        limitItem.submenu = limitMenu
+        menu.addItem(limitItem)
+
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q"))
         statusItem.menu = menu
     }
 
     @objc private func refreshData() {
+        NotificationCenter.default.post(name: .refreshStats, object: nil)
+    }
+
+    @objc private func setRollingLimit(_ sender: NSMenuItem) {
+        UserDefaults.standard.set(sender.tag, forKey: "rollingLimit")
+        if let menu = sender.menu {
+            for item in menu.items {
+                item.state = item.tag == sender.tag ? .on : .off
+            }
+        }
         NotificationCenter.default.post(name: .refreshStats, object: nil)
     }
 

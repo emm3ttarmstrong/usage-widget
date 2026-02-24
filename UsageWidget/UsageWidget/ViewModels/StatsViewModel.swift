@@ -4,74 +4,163 @@ import SwiftUI
 @Observable
 final class StatsViewModel {
     var weeks: [[ContributionDay?]] = []
-    var monthLabels: [(String, Int)] = [] // (label, column index)
+    var monthLabels: [(String, Int)] = []
     var totalMessages: Int = 0
     var totalSessions: Int = 0
+    var todayMessages: Int = 0
+    var todaySessions: Int = 0
+    var rollingWindowMessages: Int = 0
+    var rollingWindowLimit: Int = 0
+    var planLabel: String = ""
     var isLoaded = false
 
+    var customLimit: Int {
+        get { UserDefaults.standard.integer(forKey: "rollingLimit") }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "rollingLimit")
+            rollingWindowLimit = newValue
+        }
+    }
+
     private var fileWatcher: FileWatcher?
+    private var refreshTimer: Timer?
     private let weeksToShow = 16
     private let filePath: String
+    private let liveComputer = LiveStatsComputer()
 
     init() {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         self.filePath = "\(home)/.claude/stats-cache.json"
+        detectPlanLimits()
     }
 
     func startWatching() {
         loadData()
+
         fileWatcher = FileWatcher(path: filePath) { [weak self] in
             self?.loadData()
         }
         fileWatcher?.start()
+
+        // Refresh live stats every 30 seconds
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.refreshLiveStats()
+        }
     }
 
     func stopWatching() {
         fileWatcher?.stop()
         fileWatcher = nil
+        refreshTimer?.invalidate()
+        refreshTimer = nil
     }
 
     func loadData() {
-        guard let data = FileManager.default.contents(atPath: filePath) else {
-            print("StatsViewModel: Could not read \(filePath)")
-            return
-        }
+        guard let data = FileManager.default.contents(atPath: filePath) else { return }
 
         do {
             let stats = try JSONDecoder().decode(StatsCache.self, from: data)
-            totalMessages = stats.totalMessages ?? 0
-            totalSessions = stats.totalSessions ?? 0
-            buildGrid(from: stats.dailyActivity)
+            let cachedTotal = stats.totalMessages ?? 0
+            let cachedSessions = stats.totalSessions ?? 0
+
+            let lastCacheDate = stats.lastComputedDate ?? ""
+            let recentDays = liveComputer.computeRecentDays(since: lastCacheDate)
+
+            var allActivities = stats.dailyActivity
+            for (dateStr, dayStats) in recentDays where dayStats.messageCount > 0 {
+                allActivities.append(StatsCache.DailyActivity(
+                    date: dateStr,
+                    messageCount: dayStats.messageCount,
+                    sessionCount: dayStats.sessionCount,
+                    toolCallCount: 0
+                ))
+            }
+
+            let recentMessages = recentDays.values.reduce(0) { $0 + $1.messageCount }
+            let recentSessions = recentDays.values.reduce(into: Set<String>()) { $0.formUnion($1.sessionIds) }.count
+            totalMessages = cachedTotal + recentMessages
+            totalSessions = cachedSessions + recentSessions
+
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formatter.timeZone = TimeZone.current
+            let todayStr = formatter.string(from: Date())
+            if let today = recentDays[todayStr] {
+                todayMessages = today.messageCount
+                todaySessions = today.sessionCount
+            } else {
+                todayMessages = allActivities.first(where: { $0.date == todayStr })?.messageCount ?? 0
+            }
+
+            // Rolling 5-hour window
+            let rolling = liveComputer.computeRollingWindow(hours: 5)
+            rollingWindowMessages = rolling.messageCount
+
+            buildGrid(from: allActivities)
             isLoaded = true
         } catch {
             print("StatsViewModel: JSON decode error: \(error)")
         }
     }
 
+    private func refreshLiveStats() {
+        let rolling = liveComputer.computeRollingWindow(hours: 5)
+        rollingWindowMessages = rolling.messageCount
+
+        let today = liveComputer.computeTodayStats()
+        todayMessages = today.messageCount
+        todaySessions = today.sessionCount
+    }
+
+    private func detectPlanLimits() {
+        let tier = liveComputer.readRateLimitTier() ?? ""
+
+        // Set defaults based on detected plan tier
+        // These are approximate — user can override in menu
+        if tier.contains("max_20x") {
+            planLabel = "Max 20x"
+            if customLimit == 0 { customLimit = 9000 }
+        } else if tier.contains("max_5x") {
+            planLabel = "Max 5x"
+            if customLimit == 0 { customLimit = 2250 }
+        } else if tier.contains("max") {
+            planLabel = "Max"
+            if customLimit == 0 { customLimit = 2250 }
+        } else if tier.contains("pro") {
+            planLabel = "Pro"
+            if customLimit == 0 { customLimit = 450 }
+        } else {
+            planLabel = "Free"
+            if customLimit == 0 { customLimit = 200 }
+        }
+        rollingWindowLimit = customLimit
+    }
+
     private func buildGrid(from activities: [StatsCache.DailyActivity]) {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        // Build a lookup from date string to activity
         var activityMap: [String: StatsCache.DailyActivity] = [:]
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         dateFormatter.timeZone = TimeZone.current
 
         for activity in activities {
-            activityMap[activity.date] = activity
+            if let existing = activityMap[activity.date] {
+                if activity.messageCount > existing.messageCount {
+                    activityMap[activity.date] = activity
+                }
+            } else {
+                activityMap[activity.date] = activity
+            }
         }
 
-        // Find the Sunday of the current week (end column)
-        let todayWeekday = calendar.component(.weekday, from: today) // 1=Sun
+        let todayWeekday = calendar.component(.weekday, from: today)
         let daysUntilEndOfWeek = 7 - todayWeekday
         let endOfCurrentWeek = calendar.date(byAdding: .day, value: daysUntilEndOfWeek, to: today)!
-
-        // Go back weeksToShow weeks
         let totalDays = weeksToShow * 7
         let startDate = calendar.date(byAdding: .day, value: -(totalDays - 1), to: endOfCurrentWeek)!
 
-        // Build weeks grid
         var newWeeks: [[ContributionDay?]] = []
         var newMonthLabels: [(String, Int)] = []
         let monthFormatter = DateFormatter()
@@ -88,7 +177,6 @@ final class StatsViewModel {
                     continue
                 }
 
-                // Don't show future dates
                 if date > today {
                     week.append(nil)
                     continue
@@ -97,7 +185,6 @@ final class StatsViewModel {
                 let dateStr = dateFormatter.string(from: date)
                 let month = calendar.component(.month, from: date)
 
-                // Track month boundaries
                 if month != lastMonth {
                     let label = monthFormatter.string(from: date)
                     newMonthLabels.append((label, weekIndex))

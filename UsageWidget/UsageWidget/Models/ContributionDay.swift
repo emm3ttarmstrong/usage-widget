@@ -9,11 +9,11 @@ enum IntensityLevel: Int, CaseIterable {
 
     var color: Color {
         switch self {
-        case .empty:    return Color(hex: 0x161b22)
-        case .low:      return Color(hex: 0x0e4429)
-        case .medium:   return Color(hex: 0x006d32)
-        case .high:     return Color(hex: 0x26a641)
-        case .veryHigh: return Color(hex: 0x39d353)
+        case .empty:    return Color(hex: 0x1D1816)
+        case .low:      return Color(hex: 0x4A2A1A)
+        case .medium:   return Color(hex: 0x8B4A25)
+        case .high:     return Color(hex: 0xC15F3C)
+        case .veryHigh: return Color(hex: 0xDA7756)
         }
     }
 

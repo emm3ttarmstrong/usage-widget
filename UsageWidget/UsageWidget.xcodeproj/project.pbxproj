@@ -9,23 +9,27 @@
 /* Begin PBXBuildFile section */
 		204B1A555303861C4935CCC1 /* ContributionDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96F4559C2BDA79BDAA4450FF /* ContributionDay.swift */; };
 		2FD5D748BB7512B41BB8138F /* UsageWidgetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41728CA5FC0315125DCAC03F /* UsageWidgetApp.swift */; };
+		31F3860913EE780AA76A3349 /* LiveStatsComputer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08EF1FD9AD63D736E0EF9186 /* LiveStatsComputer.swift */; };
 		3AD031C54377F4A4768F5ED9 /* ContributionGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1705284D5B0DD4B01E9EE806 /* ContributionGraphView.swift */; };
 		5697F10E635E7F259564262F /* FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 228CB2981ABC0383246F3402 /* FileWatcher.swift */; };
 		78F3AAE72C1D31B45910003C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6771EF77980B6C90DA9D070C /* ContentView.swift */; };
 		8162440C8B83EB9ED9466D18 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2720161E43618A0F30437D6 /* AppDelegate.swift */; };
 		8DF8BCA42FAA30B6D9745545 /* ContributionCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E7087FAAE1322F83B65FBD /* ContributionCellView.swift */; };
 		BB470439F903F8CE88D46EE5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1676D121E2B52C6EF5D9A84 /* Assets.xcassets */; };
+		C2C24AC50B9C72A8918E4434 /* UsageLimitBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DAF5C0B28B28DA5237CD684 /* UsageLimitBarView.swift */; };
 		C47D090028F34DCA0430AC34 /* StatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FA5120F73CC042D295F0C07 /* StatsViewModel.swift */; };
 		E7484D23969AFD4FD070BAFA /* StatsCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E606B99F884D0F6606098D /* StatsCache.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		037C562F7C9403101004A241 /* UsageWidget.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UsageWidget.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		08EF1FD9AD63D736E0EF9186 /* LiveStatsComputer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveStatsComputer.swift; sourceTree = "<group>"; };
 		0FA5120F73CC042D295F0C07 /* StatsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsViewModel.swift; sourceTree = "<group>"; };
 		1705284D5B0DD4B01E9EE806 /* ContributionGraphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionGraphView.swift; sourceTree = "<group>"; };
 		228CB2981ABC0383246F3402 /* FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcher.swift; sourceTree = "<group>"; };
 		40E606B99F884D0F6606098D /* StatsCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsCache.swift; sourceTree = "<group>"; };
 		41728CA5FC0315125DCAC03F /* UsageWidgetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageWidgetApp.swift; sourceTree = "<group>"; };
+		4DAF5C0B28B28DA5237CD684 /* UsageLimitBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageLimitBarView.swift; sourceTree = "<group>"; };
 		6771EF77980B6C90DA9D070C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		70E7087FAAE1322F83B65FBD /* ContributionCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionCellView.swift; sourceTree = "<group>"; };
 		7DAD213EBB03F48798A02732 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -41,6 +45,7 @@
 				6771EF77980B6C90DA9D070C /* ContentView.swift */,
 				70E7087FAAE1322F83B65FBD /* ContributionCellView.swift */,
 				1705284D5B0DD4B01E9EE806 /* ContributionGraphView.swift */,
+				4DAF5C0B28B28DA5237CD684 /* UsageLimitBarView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -58,6 +63,7 @@
 			isa = PBXGroup;
 			children = (
 				228CB2981ABC0383246F3402 /* FileWatcher.swift */,
+				08EF1FD9AD63D736E0EF9186 /* LiveStatsComputer.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -185,8 +191,10 @@
 				204B1A555303861C4935CCC1 /* ContributionDay.swift in Sources */,
 				3AD031C54377F4A4768F5ED9 /* ContributionGraphView.swift in Sources */,
 				5697F10E635E7F259564262F /* FileWatcher.swift in Sources */,
+				31F3860913EE780AA76A3349 /* LiveStatsComputer.swift in Sources */,
 				E7484D23969AFD4FD070BAFA /* StatsCache.swift in Sources */,
 				C47D090028F34DCA0430AC34 /* StatsViewModel.swift in Sources */,
+				C2C24AC50B9C72A8918E4434 /* UsageLimitBarView.swift in Sources */,
 				2FD5D748BB7512B41BB8138F /* UsageWidgetApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
