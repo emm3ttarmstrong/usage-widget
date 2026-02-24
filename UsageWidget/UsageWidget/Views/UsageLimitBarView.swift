@@ -1,70 +1,83 @@
 import SwiftUI
 
 struct UsageLimitBarView: View {
-    let todayMessages: Int
-    let todaySessions: Int
-    let rollingMessages: Int
-    let rollingLimit: Int
-    let planLabel: String
+    let fiveHourUtil: Double
+    let sevenDayUtil: Double
+    let fiveHourReset: String
+    let sevenDayReset: String
+    let hasAPIData: Bool
+    let barHeight: CGFloat
+
+    var body: some View {
+        if hasAPIData {
+            HStack(alignment: .center, spacing: 8) {
+                VerticalBarColumn(
+                    utilization: fiveHourUtil,
+                    periodLabel: "5h",
+                    resetText: fiveHourReset,
+                    barHeight: barHeight
+                )
+                VerticalBarColumn(
+                    utilization: sevenDayUtil,
+                    periodLabel: "7d",
+                    resetText: sevenDayReset,
+                    barHeight: barHeight
+                )
+            }
+        }
+    }
+}
+
+struct VerticalBarColumn: View {
+    let utilization: Double // 0-100
+    let periodLabel: String
+    let resetText: String
+    let barHeight: CGFloat
+
+    @State private var isHovered = false
+
+    private let barWidth: CGFloat = 6
 
     private var progress: Double {
-        guard rollingLimit > 0 else { return 0 }
-        return min(Double(rollingMessages) / Double(rollingLimit), 1.0)
+        min(utilization / 100.0, 1.0)
     }
 
     private var barColor: Color {
-        switch progress {
-        case 0..<0.5:    return Color(hex: 0xDA7756)
-        case 0.5..<0.75: return Color(hex: 0xE8A84C)
-        case 0.75..<0.9: return Color(hex: 0xE07030)
-        default:         return Color(hex: 0xCC3333)
+        switch utilization {
+        case 0..<50:  return Color(hex: 0xDA7756)
+        case 50..<75: return Color(hex: 0xE8A84C)
+        case 75..<90: return Color(hex: 0xE07030)
+        default:      return Color(hex: 0xCC3333)
         }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // Rolling window
-            HStack(spacing: 4) {
-                Text("5h")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Text(planLabel)
-                    .font(.system(size: 8, weight: .medium))
-                    .foregroundStyle(Color(hex: 0xDA7756).opacity(0.7))
-                    .padding(.horizontal, 3)
-                    .padding(.vertical, 1)
-                    .background(
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color(hex: 0xDA7756).opacity(0.12))
-                    )
-                Spacer()
-                Text("\(rollingMessages) / \(rollingLimit)")
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(progress >= 0.9 ? Color(hex: 0xCC3333) : .secondary)
-            }
-
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2.5)
-                        .fill(Color(hex: 0x1D1816))
-                        .frame(height: 5)
-                    RoundedRectangle(cornerRadius: 2.5)
+        VStack(spacing: 2) {
+            ZStack {
+                VStack {
+                    Spacer(minLength: 0)
+                    RoundedRectangle(cornerRadius: 3)
                         .fill(barColor)
-                        .frame(width: max(geo.size.width * progress, progress > 0 ? 3 : 0), height: 5)
+                        .frame(height: max(barHeight * progress, progress > 0 ? 3 : 0))
                         .animation(.easeInOut(duration: 0.4), value: progress)
                 }
             }
-            .frame(height: 5)
-
-            // Today
-            HStack {
-                Text("Today")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("\(todayMessages) msgs  \(todaySessions) sessions")
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(.secondary)
+            .frame(width: barWidth, height: barHeight)
+            .background(RoundedRectangle(cornerRadius: 3).fill(Color(hex: 0x1D1816)))
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+            // Wider invisible hit area for hover
+            .overlay(
+                Color.clear
+                    .frame(width: 20, height: barHeight)
+                    .contentShape(Rectangle())
+                    .onHover { isHovered = $0 }
+            )
+            .popover(isPresented: $isHovered, arrowEdge: .leading) {
+                Text("\(periodLabel) \(Int(utilization))% — resets in \(resetText.isEmpty ? "—" : resetText)")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
             }
         }
     }

@@ -3,46 +3,45 @@ import SwiftUI
 
 @Observable
 final class StatsViewModel {
-    var weeks: [[ContributionDay?]] = []
+    var weeks: [[ContributionDay]] = []
     var monthLabels: [(String, Int)] = []
     var totalMessages: Int = 0
     var totalSessions: Int = 0
     var todayMessages: Int = 0
     var todaySessions: Int = 0
-    var rollingWindowMessages: Int = 0
-    var rollingWindowLimit: Int = 0
     var planLabel: String = ""
     var isLoaded = false
 
-    var customLimit: Int {
-        get { UserDefaults.standard.integer(forKey: "rollingLimit") }
-        set {
-            UserDefaults.standard.set(newValue, forKey: "rollingLimit")
-            rollingWindowLimit = newValue
-        }
-    }
+    // Real API usage data
+    var fiveHourUtil: Double = 0   // 0-100
+    var sevenDayUtil: Double = 0   // 0-100
+    var fiveHourReset: String = ""
+    var sevenDayReset: String = ""
+    var hasAPIData = false
 
     private var fileWatcher: FileWatcher?
     private var refreshTimer: Timer?
     private let weeksToShow = 16
     private let filePath: String
     private let liveComputer = LiveStatsComputer()
+    private let apiClient = UsageAPIClient()
 
     init() {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         self.filePath = "\(home)/.claude/stats-cache.json"
-        detectPlanLimits()
+        detectPlan()
     }
 
     func startWatching() {
         loadData()
+        fetchAPIUsage()
 
         fileWatcher = FileWatcher(path: filePath) { [weak self] in
             self?.loadData()
         }
         fileWatcher?.start()
 
-        // Refresh live stats every 30 seconds
+        // Refresh live stats every 30s, API every 60s
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             self?.refreshLiveStats()
         }
@@ -92,10 +91,6 @@ final class StatsViewModel {
                 todayMessages = allActivities.first(where: { $0.date == todayStr })?.messageCount ?? 0
             }
 
-            // Rolling 5-hour window
-            let rolling = liveComputer.computeRollingWindow(hours: 5)
-            rollingWindowMessages = rolling.messageCount
-
             buildGrid(from: allActivities)
             isLoaded = true
         } catch {
@@ -103,37 +98,54 @@ final class StatsViewModel {
         }
     }
 
-    private func refreshLiveStats() {
-        let rolling = liveComputer.computeRollingWindow(hours: 5)
-        rollingWindowMessages = rolling.messageCount
+    func fetchAPIUsage() {
+        Task {
+            guard let usage = await apiClient.fetchUsage() else { return }
 
+            await MainActor.run {
+                if let fh = usage.fiveHour {
+                    fiveHourUtil = fh.utilization
+                    fiveHourReset = formatReset(fh.resetsAt)
+                }
+                if let sd = usage.sevenDay {
+                    sevenDayUtil = sd.utilization
+                    sevenDayReset = formatReset(sd.resetsAt)
+                }
+                hasAPIData = true
+            }
+        }
+    }
+
+    private func refreshLiveStats() {
         let today = liveComputer.computeTodayStats()
         todayMessages = today.messageCount
         todaySessions = today.sessionCount
+
+        // Refresh API every other cycle (60s)
+        fetchAPIUsage()
     }
 
-    private func detectPlanLimits() {
+    private func detectPlan() {
         let tier = liveComputer.readRateLimitTier() ?? ""
+        if tier.contains("max_20x") { planLabel = "Max 20x" }
+        else if tier.contains("max_5x") { planLabel = "Max 5x" }
+        else if tier.contains("max") { planLabel = "Max" }
+        else if tier.contains("pro") { planLabel = "Pro" }
+        else { planLabel = "Free" }
+    }
 
-        // Set defaults based on detected plan tier
-        // These are approximate — user can override in menu
-        if tier.contains("max_20x") {
-            planLabel = "Max 20x"
-            if customLimit == 0 { customLimit = 9000 }
-        } else if tier.contains("max_5x") {
-            planLabel = "Max 5x"
-            if customLimit == 0 { customLimit = 2250 }
-        } else if tier.contains("max") {
-            planLabel = "Max"
-            if customLimit == 0 { customLimit = 2250 }
-        } else if tier.contains("pro") {
-            planLabel = "Pro"
-            if customLimit == 0 { customLimit = 450 }
-        } else {
-            planLabel = "Free"
-            if customLimit == 0 { customLimit = 200 }
+    private func formatReset(_ date: Date?) -> String {
+        guard let date else { return "" }
+        let diff = date.timeIntervalSinceNow
+        guard diff > 0 else { return "now" }
+
+        let hours = Int(diff) / 3600
+        let minutes = (Int(diff) % 3600) / 60
+
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
         }
-        rollingWindowLimit = customLimit
+        return "\(minutes)m"
     }
 
     private func buildGrid(from activities: [StatsCache.DailyActivity]) {
@@ -161,7 +173,7 @@ final class StatsViewModel {
         let totalDays = weeksToShow * 7
         let startDate = calendar.date(byAdding: .day, value: -(totalDays - 1), to: endOfCurrentWeek)!
 
-        var newWeeks: [[ContributionDay?]] = []
+        var newWeeks: [[ContributionDay]] = []
         var newMonthLabels: [(String, Int)] = []
         let monthFormatter = DateFormatter()
         monthFormatter.dateFormat = "MMM"
@@ -169,18 +181,10 @@ final class StatsViewModel {
         var lastMonth = -1
 
         for weekIndex in 0..<weeksToShow {
-            var week: [ContributionDay?] = []
+            var week: [ContributionDay] = []
             for dayIndex in 0..<7 {
                 let dayOffset = weekIndex * 7 + dayIndex
-                guard let date = calendar.date(byAdding: .day, value: dayOffset, to: startDate) else {
-                    week.append(nil)
-                    continue
-                }
-
-                if date > today {
-                    week.append(nil)
-                    continue
-                }
+                let date = calendar.date(byAdding: .day, value: dayOffset, to: startDate)!
 
                 let dateStr = dateFormatter.string(from: date)
                 let month = calendar.component(.month, from: date)
@@ -191,22 +195,31 @@ final class StatsViewModel {
                     lastMonth = month
                 }
 
-                if let activity = activityMap[dateStr] {
-                    week.append(ContributionDay(
+                if date > today {
+                    week.append(ContributionDay.future(date: date))
+                } else if let activity = activityMap[dateStr] {
+                    var day = ContributionDay(
                         date: date,
                         messageCount: activity.messageCount,
                         sessionCount: activity.sessionCount,
                         toolCallCount: activity.toolCallCount,
                         intensity: IntensityLevel.from(messageCount: activity.messageCount)
-                    ))
+                    )
+                    day.isToday = (date == today)
+                    week.append(day)
                 } else {
-                    week.append(ContributionDay.empty(date: date))
+                    var day = ContributionDay.empty(date: date)
+                    day.isToday = (date == today)
+                    week.append(day)
                 }
             }
             newWeeks.append(week)
         }
 
-        self.weeks = newWeeks
+        // Filter to weekdays only (Mon-Fri, indices 1-5; 0=Sun, 6=Sat)
+        self.weeks = newWeeks.map { week in
+            Array(week[1...5])
+        }
         self.monthLabels = newMonthLabels
     }
 }

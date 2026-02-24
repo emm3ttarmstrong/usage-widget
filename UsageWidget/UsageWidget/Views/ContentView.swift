@@ -4,46 +4,31 @@ struct ContentView: View {
     @State var viewModel: StatsViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // Title bar
-            HStack(spacing: 6) {
-                Image(systemName: "terminal.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color(hex: 0xDA7756))
-                Text("Claude Code")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white)
-                Spacer()
-                if viewModel.isLoaded {
-                    Text("\(viewModel.totalMessages) msgs")
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                    Text("\(viewModel.totalSessions) sessions")
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                }
-            }
-
+        VStack(spacing: 0) {
             if viewModel.isLoaded {
-                ContributionGraphView(
-                    weeks: viewModel.weeks,
-                    monthLabels: viewModel.monthLabels
-                )
+                HStack(alignment: .top, spacing: 8) {
+                    ContributionGraphView(
+                        weeks: viewModel.weeks
+                    )
 
-                UsageLimitBarView(
-                    todayMessages: viewModel.todayMessages,
-                    todaySessions: viewModel.todaySessions,
-                    rollingMessages: viewModel.rollingWindowMessages,
-                    rollingLimit: viewModel.rollingWindowLimit,
-                    planLabel: viewModel.planLabel
-                )
+                    UsageLimitBarView(
+                        fiveHourUtil: viewModel.fiveHourUtil,
+                        sevenDayUtil: viewModel.sevenDayUtil,
+                        fiveHourReset: viewModel.fiveHourReset,
+                        sevenDayReset: viewModel.sevenDayReset,
+                        hasAPIData: viewModel.hasAPIData,
+                        barHeight: 72
+                    )
+                }
             } else {
                 Text("Loading...")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
         }
-        .padding(12)
+        .padding(.horizontal, 10)
+        .padding(.top, 9)
+        .padding(.bottom, 6)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(.ultraThinMaterial)

@@ -35,15 +35,21 @@ struct ContributionDay: Identifiable {
     let sessionCount: Int
     let toolCallCount: Int
     let intensity: IntensityLevel
+    var isToday: Bool = false
+    var isFuture: Bool = false
 
     var tooltipText: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy"
-        let dateStr = formatter.string(from: date)
+        let dateFmt = DateFormatter()
+        dateFmt.dateFormat = "MMM d"
+        let dayFmt = DateFormatter()
+        dayFmt.dateFormat = "EEEE"
+        let dateStr = dateFmt.string(from: date)
+        let dayName = dayFmt.string(from: date)
+        if isFuture { return "\(dayName), \(dateStr)" }
         if messageCount == 0 {
-            return "No activity on \(dateStr)"
+            return "\(dayName), \(dateStr) — no activity"
         }
-        return "\(messageCount) messages on \(dateStr)"
+        return "\(dayName), \(dateStr) — \(messageCount.formatted()) msgs"
     }
 
     static func empty(date: Date) -> ContributionDay {
@@ -53,6 +59,17 @@ struct ContributionDay: Identifiable {
             sessionCount: 0,
             toolCallCount: 0,
             intensity: .empty
+        )
+    }
+
+    static func future(date: Date) -> ContributionDay {
+        ContributionDay(
+            date: date,
+            messageCount: 0,
+            sessionCount: 0,
+            toolCallCount: 0,
+            intensity: .empty,
+            isFuture: true
         )
     }
 }

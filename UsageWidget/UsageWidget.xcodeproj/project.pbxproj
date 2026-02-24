@@ -19,9 +19,11 @@
 		C2C24AC50B9C72A8918E4434 /* UsageLimitBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DAF5C0B28B28DA5237CD684 /* UsageLimitBarView.swift */; };
 		C47D090028F34DCA0430AC34 /* StatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FA5120F73CC042D295F0C07 /* StatsViewModel.swift */; };
 		E7484D23969AFD4FD070BAFA /* StatsCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E606B99F884D0F6606098D /* StatsCache.swift */; };
+		F39494CF09E8A102F5E9241A /* UsageAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 015340E19C7825A1B60A9DD3 /* UsageAPIClient.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		015340E19C7825A1B60A9DD3 /* UsageAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageAPIClient.swift; sourceTree = "<group>"; };
 		037C562F7C9403101004A241 /* UsageWidget.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UsageWidget.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		08EF1FD9AD63D736E0EF9186 /* LiveStatsComputer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveStatsComputer.swift; sourceTree = "<group>"; };
 		0FA5120F73CC042D295F0C07 /* StatsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsViewModel.swift; sourceTree = "<group>"; };
@@ -36,6 +38,7 @@
 		96F4559C2BDA79BDAA4450FF /* ContributionDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributionDay.swift; sourceTree = "<group>"; };
 		A1676D121E2B52C6EF5D9A84 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C2720161E43618A0F30437D6 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		D03555CA6BA9F346FC821EC8 /* UsageWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UsageWidget.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -64,6 +67,7 @@
 			children = (
 				228CB2981ABC0383246F3402 /* FileWatcher.swift */,
 				08EF1FD9AD63D736E0EF9186 /* LiveStatsComputer.swift */,
+				015340E19C7825A1B60A9DD3 /* UsageAPIClient.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -97,6 +101,7 @@
 			children = (
 				A1676D121E2B52C6EF5D9A84 /* Assets.xcassets */,
 				7DAD213EBB03F48798A02732 /* Info.plist */,
+				D03555CA6BA9F346FC821EC8 /* UsageWidget.entitlements */,
 				5FA950DCCBFA8A766CED4C7E /* App */,
 				F00D610E57562E05753268D5 /* Models */,
 				6759D1645D01B1C2304619E1 /* Utilities */,
@@ -194,6 +199,7 @@
 				31F3860913EE780AA76A3349 /* LiveStatsComputer.swift in Sources */,
 				E7484D23969AFD4FD070BAFA /* StatsCache.swift in Sources */,
 				C47D090028F34DCA0430AC34 /* StatsViewModel.swift in Sources */,
+				F39494CF09E8A102F5E9241A /* UsageAPIClient.swift in Sources */,
 				C2C24AC50B9C72A8918E4434 /* UsageLimitBarView.swift in Sources */,
 				2FD5D748BB7512B41BB8138F /* UsageWidgetApp.swift in Sources */,
 			);
