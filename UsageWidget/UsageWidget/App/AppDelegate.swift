@@ -4,12 +4,18 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: NSPanel!
     private var statusItem: NSStatusItem!
+    private var activity: NSObjectProtocol?
 
     private let windowPositionXKey = "windowPositionX"
     private let windowPositionYKey = "windowPositionY"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+
+        activity = ProcessInfo.processInfo.beginActivity(
+            options: .userInitiated,
+            reason: "Live stats refresh"
+        )
 
         setupPanel()
         setupMenuBar()

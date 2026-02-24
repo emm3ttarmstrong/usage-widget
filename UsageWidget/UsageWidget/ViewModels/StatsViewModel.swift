@@ -21,6 +21,7 @@ final class StatsViewModel {
 
     private var fileWatcher: FileWatcher?
     private var refreshTimer: Timer?
+    private var lastLoadedDate: String = ""
     private let weeksToShow = 16
     private let filePath: String
     private let liveComputer = LiveStatsComputer()
@@ -42,9 +43,12 @@ final class StatsViewModel {
         fileWatcher?.start()
 
         // Refresh live stats every 30s, API every 60s
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+        // Use .common RunLoop mode so the timer fires during window drags
+        let timer = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
             self?.refreshLiveStats()
         }
+        RunLoop.main.add(timer, forMode: .common)
+        refreshTimer = timer
     }
 
     func stopWatching() {
@@ -91,6 +95,7 @@ final class StatsViewModel {
                 todayMessages = allActivities.first(where: { $0.date == todayStr })?.messageCount ?? 0
             }
 
+            lastLoadedDate = todayStr
             buildGrid(from: allActivities)
             isLoaded = true
         } catch {
@@ -117,6 +122,15 @@ final class StatsViewModel {
     }
 
     private func refreshLiveStats() {
+        // Detect day transition — rebuild grid if date changed
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
+        let currentDate = formatter.string(from: Date())
+        if currentDate != lastLoadedDate {
+            loadData()
+        }
+
         let today = liveComputer.computeTodayStats()
         todayMessages = today.messageCount
         todaySessions = today.sessionCount
