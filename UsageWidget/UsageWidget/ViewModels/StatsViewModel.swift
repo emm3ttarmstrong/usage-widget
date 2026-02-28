@@ -135,8 +135,30 @@ final class StatsViewModel {
         todayMessages = today.messageCount
         todaySessions = today.sessionCount
 
+        // Update today's cell in the grid so the contribution graph reflects live stats
+        updateTodayCell(messageCount: today.messageCount, sessionCount: today.sessionCount)
+
         // Refresh API every other cycle (60s)
         fetchAPIUsage()
+    }
+
+    private func updateTodayCell(messageCount: Int, sessionCount: Int) {
+        for weekIndex in weeks.indices {
+            for dayIndex in weeks[weekIndex].indices {
+                if weeks[weekIndex][dayIndex].isToday {
+                    let oldDay = weeks[weekIndex][dayIndex]
+                    weeks[weekIndex][dayIndex] = ContributionDay(
+                        date: oldDay.date,
+                        messageCount: messageCount,
+                        sessionCount: sessionCount,
+                        toolCallCount: 0,
+                        intensity: IntensityLevel.from(messageCount: messageCount),
+                        isToday: true
+                    )
+                    return
+                }
+            }
+        }
     }
 
     private func detectPlan() {
