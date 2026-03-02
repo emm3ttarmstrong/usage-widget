@@ -45,8 +45,5 @@ struct ContentView: View {
         .onDisappear {
             viewModel.stopWatching()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .refreshStats)) { _ in
-            viewModel.loadData()
-        }
     }
 }

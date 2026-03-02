@@ -3,7 +3,6 @@ import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: NSPanel!
-    private var statusItem: NSStatusItem!
     private var activity: NSObjectProtocol?
 
     private let windowPositionXKey = "windowPositionX"
@@ -18,7 +17,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         setupPanel()
-        setupMenuBar()
     }
 
     private func setupPanel() {
@@ -84,28 +82,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.set(origin.y, forKey: windowPositionYKey)
     }
 
-    private func setupMenuBar() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "chart.bar.fill", accessibilityDescription: "Usage Widget")
-        }
-
-        let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Refresh", action: #selector(refreshData), keyEquivalent: "r"))
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q"))
-        statusItem.menu = menu
-    }
-
-    @objc private func refreshData() {
-        NotificationCenter.default.post(name: .refreshStats, object: nil)
-    }
-
-    @objc private func quitApp() {
-        NSApp.terminate(nil)
-    }
-}
-
-extension Notification.Name {
-    static let refreshStats = Notification.Name("refreshStats")
 }
