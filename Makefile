@@ -36,6 +36,7 @@ build:
 
 install: build
 	@mkdir -p $(INSTALL_DIR)
+	rm -rf $(INSTALL_DIR)/$(APP_NAME).app
 	cp -R $(APP_PATH) $(INSTALL_DIR)/$(APP_NAME).app
 	@echo "✓ Installed to $(INSTALL_DIR)/$(APP_NAME).app"
 

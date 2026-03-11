@@ -84,14 +84,18 @@ final class UsageAPIClient {
             return nil
         }
 
-        // The output is hex-encoded — decode it
+        // Try raw JSON first (current keychain format)
+        if let token = extractToken(from: hexString) {
+            return token
+        }
+
+        // Fall back to hex-encoded format (legacy)
         if let hexDecoded = hexDecode(hexString),
            let str = String(data: hexDecoded, encoding: .utf8) {
             return extractToken(from: str)
         }
 
-        // Might be raw JSON
-        return extractToken(from: hexString)
+        return nil
     }
 
     private func extractToken(from string: String) -> String? {
@@ -115,11 +119,19 @@ final class UsageAPIClient {
 
         let fragment = String(jsonStr[jsonStr.startIndex..<endIdx])
         guard let data = fragment.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let token = json["accessToken"] as? String else {
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return nil
         }
-        return token
+
+        // Token may be at top level or nested under claudeAiOauth
+        if let token = json["accessToken"] as? String {
+            return token
+        }
+        if let oauth = json["claudeAiOauth"] as? [String: Any],
+           let token = oauth["accessToken"] as? String {
+            return token
+        }
+        return nil
     }
 
     private func hexDecode(_ hex: String) -> Data? {
