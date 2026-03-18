@@ -22,6 +22,7 @@ final class StatsViewModel {
     private var fileWatcher: FileWatcher?
     private var refreshTimer: Timer?
     private var lastLoadedDate: String = ""
+    private var lastAPIFetch: Date = .distantPast
     private let weeksToShow = 16
     private let filePath: String
     private let liveComputer = LiveStatsComputer()
@@ -31,6 +32,7 @@ final class StatsViewModel {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         self.filePath = "\(home)/.claude/stats-cache.json"
         detectPlan()
+        loadCachedAPIData()
     }
 
     func startWatching() {
@@ -104,21 +106,61 @@ final class StatsViewModel {
     }
 
     func fetchAPIUsage() {
+        lastAPIFetch = Date()
         Task {
-            guard let usage = await apiClient.fetchUsage() else { return }
-
-            await MainActor.run {
-                if let fh = usage.fiveHour {
-                    fiveHourUtil = fh.utilization
-                    fiveHourReset = formatReset(fh.resetsAt)
+            guard let usage = await apiClient.fetchUsage() else {
+                // Retry once after 5s if we've never loaded API data
+                if !hasAPIData {
+                    try? await Task.sleep(nanoseconds: 5_000_000_000)
+                    guard let retry = await apiClient.fetchUsage() else { return }
+                    await applyUsage(retry)
                 }
-                if let sd = usage.sevenDay {
-                    sevenDayUtil = sd.utilization
-                    sevenDayReset = formatReset(sd.resetsAt)
-                }
-                hasAPIData = true
+                return
             }
+
+            await applyUsage(usage)
         }
+    }
+
+    @MainActor
+    private func applyUsage(_ usage: UsageData) {
+        if let fh = usage.fiveHour {
+            fiveHourUtil = fh.utilization
+            fiveHourReset = formatReset(fh.resetsAt)
+        }
+        if let sd = usage.sevenDay {
+            sevenDayUtil = sd.utilization
+            sevenDayReset = formatReset(sd.resetsAt)
+        }
+        hasAPIData = true
+        saveCachedAPIData()
+    }
+
+    // MARK: - API Data Caching (survives app restarts)
+
+    private func saveCachedAPIData() {
+        let defaults = UserDefaults.standard
+        defaults.set(fiveHourUtil, forKey: "cachedFiveHourUtil")
+        defaults.set(sevenDayUtil, forKey: "cachedSevenDayUtil")
+        defaults.set(fiveHourReset, forKey: "cachedFiveHourReset")
+        defaults.set(sevenDayReset, forKey: "cachedSevenDayReset")
+        defaults.set(Date().timeIntervalSince1970, forKey: "cachedAPIDataTimestamp")
+    }
+
+    private func loadCachedAPIData() {
+        let defaults = UserDefaults.standard
+        let timestamp = defaults.double(forKey: "cachedAPIDataTimestamp")
+        guard timestamp > 0 else { return }
+
+        // Use cached data if less than 1 hour old
+        let age = Date().timeIntervalSince1970 - timestamp
+        guard age < 3600 else { return }
+
+        fiveHourUtil = defaults.double(forKey: "cachedFiveHourUtil")
+        sevenDayUtil = defaults.double(forKey: "cachedSevenDayUtil")
+        fiveHourReset = defaults.string(forKey: "cachedFiveHourReset") ?? ""
+        sevenDayReset = defaults.string(forKey: "cachedSevenDayReset") ?? ""
+        hasAPIData = true
     }
 
     private func refreshLiveStats() {
@@ -138,8 +180,11 @@ final class StatsViewModel {
         // Update today's cell in the grid so the contribution graph reflects live stats
         updateTodayCell(messageCount: today.messageCount, sessionCount: today.sessionCount)
 
-        // Refresh API every other cycle (60s)
-        fetchAPIUsage()
+        // Respect backoff interval from API client
+        let elapsed = Date().timeIntervalSince(lastAPIFetch)
+        if elapsed >= apiClient.backoffInterval {
+            fetchAPIUsage()
+        }
     }
 
     private func updateTodayCell(messageCount: Int, sessionCount: Int) {

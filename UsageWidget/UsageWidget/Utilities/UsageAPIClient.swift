@@ -15,10 +15,22 @@ struct UsageData {
 
 final class UsageAPIClient {
     private let keychainService = "Claude Code-credentials"
+    private var consecutiveFailures = 0
+
+    /// Seconds to wait before next attempt. Grows with consecutive failures.
+    var backoffInterval: TimeInterval {
+        switch consecutiveFailures {
+        case 0: return 60
+        case 1: return 120
+        case 2: return 300
+        default: return 600
+        }
+    }
 
     func fetchUsage() async -> UsageData? {
         guard let token = readTokenFromKeychain() else {
             print("UsageAPIClient: No token found in Keychain")
+            consecutiveFailures += 1
             return nil
         }
 
@@ -27,7 +39,7 @@ final class UsageAPIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("claude-code/2.1.50", forHTTPHeaderField: "User-Agent")
+        request.setValue("claude-code/2.1.78", forHTTPHeaderField: "User-Agent")
         request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 10
@@ -38,7 +50,8 @@ final class UsageAPIClient {
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
                 let code = (response as? HTTPURLResponse)?.statusCode ?? -1
-                print("UsageAPIClient: HTTP \(code)")
+                print("UsageAPIClient: HTTP \(code) (failure \(consecutiveFailures + 1), next try in \(Int(backoffInterval))s)")
+                consecutiveFailures += 1
                 return nil
             }
 
@@ -46,9 +59,11 @@ final class UsageAPIClient {
                 return nil
             }
 
+            consecutiveFailures = 0
             return parseResponse(json)
         } catch {
             print("UsageAPIClient: \(error)")
+            consecutiveFailures += 1
             return nil
         }
     }
