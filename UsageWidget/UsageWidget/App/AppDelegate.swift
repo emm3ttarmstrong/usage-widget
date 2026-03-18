@@ -1,9 +1,12 @@
 import AppKit
+import ServiceManagement
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var panel: NSPanel!
     private var activity: NSObjectProtocol?
+    private var eventMonitor: Any?
+    private var contextMenu: NSMenu!
 
     private let windowPositionXKey = "windowPositionX"
     private let windowPositionYKey = "windowPositionY"
@@ -17,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         setupPanel()
+        setupContextMenu()
     }
 
     private func setupPanel() {
@@ -80,6 +84,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func saveWindowPosition(_ origin: NSPoint) {
         UserDefaults.standard.set(origin.x, forKey: windowPositionXKey)
         UserDefaults.standard.set(origin.y, forKey: windowPositionYKey)
+    }
+
+    // MARK: - Context Menu
+
+    private func setupContextMenu() {
+        contextMenu = NSMenu()
+
+        let launchItem = NSMenuItem(
+            title: "Launch at Login",
+            action: #selector(toggleLaunchAtLogin(_:)),
+            keyEquivalent: ""
+        )
+        launchItem.target = self
+        contextMenu.addItem(launchItem)
+
+        contextMenu.addItem(.separator())
+
+        let quitItem = NSMenuItem(
+            title: "Quit",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        contextMenu.addItem(quitItem)
+
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak self] event in
+            guard let self, let panel = self.panel else { return event }
+            if event.window == panel {
+                NSMenu.popUpContextMenu(self.contextMenu, with: event, for: panel.contentView!)
+                return nil
+            }
+            return event
+        }
+    }
+
+    @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
+        let service = SMAppService.mainApp
+        do {
+            if service.status == .enabled {
+                try service.unregister()
+            } else {
+                try service.register()
+            }
+        } catch {
+            NSLog("Launch at Login toggle failed: \(error)")
+        }
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(toggleLaunchAtLogin(_:)) {
+            menuItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        }
+        return true
     }
 
 }
