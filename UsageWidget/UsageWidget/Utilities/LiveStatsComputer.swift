@@ -24,10 +24,28 @@ final class LiveStatsComputer {
 
     /// Read the rate limit tier from credentials
     func readRateLimitTier() -> String? {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let credsPath = "\(home)/.claude/.credentials.json"
-        guard let data = FileManager.default.contents(atPath: credsPath),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        // Read credentials from macOS Keychain (Claude Code no longer writes .credentials.json)
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        process.arguments = ["find-generic-password", "-s", "Claude Code-credentials", "-w"]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch { return nil }
+
+        guard process.terminationStatus == 0 else { return nil }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let raw = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty,
+              let jsonStart = raw.firstIndex(of: "{"),
+              let jsonData = String(raw[jsonStart...]).data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
               let oauth = json["claudeAiOauth"] as? [String: Any] else { return nil }
         return oauth["rateLimitTier"] as? String
     }

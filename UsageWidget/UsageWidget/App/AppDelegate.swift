@@ -1,5 +1,4 @@
 import AppKit
-import ServiceManagement
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
@@ -118,22 +117,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
     }
 
+    // MARK: - Launch at Login (LaunchAgent plist)
+
+    private var launchAgentURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/LaunchAgents/com.emmett.UsageWidget.plist")
+    }
+
+    private var isLaunchAgentInstalled: Bool {
+        FileManager.default.fileExists(atPath: launchAgentURL.path)
+    }
+
     @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
-        let service = SMAppService.mainApp
-        do {
-            if service.status == .enabled {
-                try service.unregister()
-            } else {
-                try service.register()
-            }
-        } catch {
-            NSLog("Launch at Login toggle failed: \(error)")
+        if isLaunchAgentInstalled {
+            try? FileManager.default.removeItem(at: launchAgentURL)
+        } else {
+            let plist: [String: Any] = [
+                "Label": "com.emmett.UsageWidget",
+                "ProgramArguments": ["/Applications/UsageWidget.app/Contents/MacOS/UsageWidget"],
+                "RunAtLoad": true,
+                "KeepAlive": ["SuccessfulExit": false],
+            ]
+            let data = try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+            FileManager.default.createFile(atPath: launchAgentURL.path, contents: data)
         }
     }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if menuItem.action == #selector(toggleLaunchAtLogin(_:)) {
-            menuItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+            menuItem.state = isLaunchAgentInstalled ? .on : .off
         }
         return true
     }
