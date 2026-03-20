@@ -14,7 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         NSApp.setActivationPolicy(.accessory)
 
         activity = ProcessInfo.processInfo.beginActivity(
-            options: .userInitiated,
+            options: .userInitiatedAllowingIdleSystemSleep,
             reason: "Live stats refresh"
         )
 
@@ -46,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         panel.isMovableByWindowBackground = true
         panel.hidesOnDeactivate = false
+        panel.isRestorable = false
 
         if let x = UserDefaults.standard.object(forKey: windowPositionXKey) as? CGFloat,
            let y = UserDefaults.standard.object(forKey: windowPositionYKey) as? CGFloat {
